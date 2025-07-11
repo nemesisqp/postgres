@@ -46,6 +46,7 @@ ENV POSTGRESQL_VERSION=17
 ENV PGROONGA_VERSION=4.0.1-1
 ENV PGVECTORSCALE_VERSION=0.8.0
 ENV POSTGIS_MAJOR=3
+ENV SUPERCRONIC_VERSION=v0.2.34
 
 # install pgroonga
 RUN \
@@ -85,12 +86,41 @@ COPY --from=builder /tmp/pg-safeupdate-master/safeupdate.so /usr/lib/postgresql/
 RUN mkdir -p /docker-entrypoint-initdb.d
 COPY ./initdb-postgis.sh /docker-entrypoint-initdb.d/10_postgis.sh
 COPY ./update-postgis.sh /usr/local/bin
+COPY ./initdb-pgbackrest.sh /docker-entrypoint-initdb.d/20_pgbackrest.sh
+COPY ./entrypoint.sh /usr/local/bin/
+# Add execute permissions to all scripts in /usr/local/bin
+RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/update-postgis.sh
 
-RUN echo "shared_preload_libraries='pg_cron,safeupdate'" >> /usr/share/postgresql/postgresql.conf.sample
-RUN echo "cron.database_name='${POSTGRES_DB:-postgres}'" >> /usr/share/postgresql/postgresql.conf.sample
+RUN echo "shared_preload_libraries='pg_cron,safeupdate'" >> /usr/share/postgresql/postgresql.conf.sample && \
+  echo "cron.database_name='${POSTGRES_DB:-postgres}'" >> /usr/share/postgresql/postgresql.conf.sample
+
+# supercronic
+RUN ARCH=$(dpkg --print-architecture) && \
+    case "$ARCH" in \
+        amd64)  SUPERCRONIC=supercronic-linux-amd64 ;; \
+        arm64)  SUPERCRONIC=supercronic-linux-arm64 ;; \
+        *)      echo "Unsupported architecture: $ARCH" && exit 1 ;; \
+    esac && \
+    curl -fsSLO "https://github.com/aptible/supercronic/releases/download/${SUPERCRONIC_VERSION}/${SUPERCRONIC}" && \
+    chmod +x "$SUPERCRONIC" && \
+    mv "$SUPERCRONIC" /usr/local/bin/supercronic
+# pgbackrest
+RUN chmod -R 755 /usr/bin/pgbackrest && \
+    mkdir -p /etc/pgbackrest && mkdir -p /etc/pgbackrest/conf.d && touch /etc/pgbackrest/pgbackrest.conf && chown -R postgres:postgres /etc/pgbackrest && chmod -R 750 /etc/pgbackrest && \
+    mkdir -p /var/log/pgbackrest && chown -R postgres:postgres /var/log/pgbackrest && chmod -R 770 /var/log/pgbackrest && \
+    mkdir -p /var/lib/pgbackrest && chown -R postgres:postgres /var/lib/pgbackrest && chmod -R 770 /var/lib/pgbackrest && \
+    mkdir -p /var/spool/pgbackrest && chown -R postgres:postgres /var/spool/pgbackrest && chmod -R 750 /var/spool/pgbackrest && \
+    mkdir -p /tmp/pgbackrest && chown -R postgres:postgres /tmp/pgbackrest && chmod -R 750 /tmp/pgbackrest && \
+    echo "wal_level = replica" >> /usr/share/postgresql/postgresql.conf.sample && \
+    echo "wal_compression = on" >> /usr/share/postgresql/postgresql.conf.sample && \
+    echo "max_wal_senders = 4" >> /usr/share/postgresql/postgresql.conf.sample && \
+    echo "archive_mode = on" >> /usr/share/postgresql/postgresql.conf.sample && \
+     echo "archive_command = 'pgbackrest --stanza=default archive-push %p'" >> /usr/share/postgresql/postgresql.conf.sample && \
+     echo "archive_timeout = 1800" >> /usr/share/postgresql/postgresql.conf.sample
+
 
 HEALTHCHECK --interval=10s --timeout=5s --start-period=5s --retries=5 \
   CMD pg_isready -U "${POSTGRES_USER:-postgres}" || exit 1
 
-ENTRYPOINT ["docker-entrypoint.sh"]
+ENTRYPOINT ["entrypoint.sh"]
 CMD ["postgres"]
