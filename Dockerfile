@@ -51,7 +51,7 @@ ENV SUPERCRONIC_VERSION=v0.2.34
 # install pgroonga
 RUN \
   apt update && \
-  apt install -y -V --no-install-recommends lsb-release wget ca-certificates curl && \
+  apt install -y -V --no-install-recommends lsb-release wget ca-certificates curl pgbackrest tzdata libxml2 libssh2-1 && \
   wget https://apache.jfrog.io/artifactory/arrow/debian/apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb && \
   apt install -y -V ./apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb && \
   rm apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb && \
