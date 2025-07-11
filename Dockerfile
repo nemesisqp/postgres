@@ -51,7 +51,7 @@ ENV SUPERCRONIC_VERSION=v0.2.34
 # install pgroonga
 RUN \
   apt update && \
-  apt install -y -V --no-install-recommends lsb-release wget ca-certificates && \
+  apt install -y -V --no-install-recommends lsb-release wget ca-certificates curl && \
   wget https://apache.jfrog.io/artifactory/arrow/debian/apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb && \
   apt install -y -V ./apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb && \
   rm apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb && \
@@ -101,7 +101,7 @@ RUN ARCH=$(dpkg --print-architecture) && \
         arm64)  SUPERCRONIC=supercronic-linux-arm64 ;; \
         *)      echo "Unsupported architecture: $ARCH" && exit 1 ;; \
     esac && \
-    curl -fsSLO "https://github.com/aptible/supercronic/releases/download/${SUPERCRONIC_VERSION}/${SUPERCRONIC}" && \
+    wget -q "https://github.com/aptible/supercronic/releases/download/${SUPERCRONIC_VERSION}/${SUPERCRONIC}" && \
     chmod +x "$SUPERCRONIC" && \
     mv "$SUPERCRONIC" /usr/local/bin/supercronic
 # pgbackrest
@@ -115,8 +115,8 @@ RUN chmod -R 755 /usr/bin/pgbackrest && \
     echo "wal_compression = on" >> /usr/share/postgresql/postgresql.conf.sample && \
     echo "max_wal_senders = 4" >> /usr/share/postgresql/postgresql.conf.sample && \
     echo "archive_mode = on" >> /usr/share/postgresql/postgresql.conf.sample && \
-     echo "archive_command = 'pgbackrest --stanza=default archive-push %p'" >> /usr/share/postgresql/postgresql.conf.sample && \
-     echo "archive_timeout = 1800" >> /usr/share/postgresql/postgresql.conf.sample
+    echo "archive_command = 'pgbackrest --stanza=default archive-push %p'" >> /usr/share/postgresql/postgresql.conf.sample && \
+    echo "archive_timeout = 1800" >> /usr/share/postgresql/postgresql.conf.sample
 
 
 HEALTHCHECK --interval=10s --timeout=5s --start-period=5s --retries=5 \

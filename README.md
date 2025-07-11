@@ -1,5 +1,12 @@
 # postgres
-Postgresql, postgis, pgvector, pgvectorscale, pgroonga, cron, safeupdate
+Postgresql
+* postgis
+* pgvector
+* pgvectorscale
+* pgroonga
+* pg_cron
+* pg_safeupdate
+* pgbackrest with full backup per week, daily incremental backup, keep for 3 months
 
 # build command
 ```bash
