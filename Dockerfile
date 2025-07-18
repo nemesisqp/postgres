@@ -84,9 +84,9 @@ COPY --from=builder /tmp/pgvectorscale/target/release/vectorscale-pg${POSTGRESQL
 COPY --from=builder /tmp/pg-safeupdate-master/safeupdate.so /usr/lib/postgresql/${POSTGRESQL_VERSION}/lib/
 
 RUN mkdir -p /docker-entrypoint-initdb.d
-COPY ./initdb-postgis.sh /docker-entrypoint-initdb.d/10_postgis.sh
+COPY ./initdb-postgis.sh /docker-entrypoint-initdb.d/20_postgis.sh
 COPY ./update-postgis.sh /usr/local/bin
-COPY ./initdb-pgbackrest.sh /docker-entrypoint-initdb.d/20_pgbackrest.sh
+COPY ./initdb-pgbackrest.sh /docker-entrypoint-initdb.d/10_pgbackrest.sh
 COPY ./entrypoint.sh /usr/local/bin/
 # Add execute permissions to all scripts in /usr/local/bin
 RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/update-postgis.sh

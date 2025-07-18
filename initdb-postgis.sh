@@ -15,7 +15,7 @@ for DB in template_postgis "$POSTGRES_DB"; do
 	echo "Loading PostGIS extensions into $DB"
 	psql --dbname="$DB" <<-'EOSQL'
     -- Temporarily disable pg-safeupdate for this transaction.
-    SET LOCAL safeupdate.enabled = false;
+    SET safeupdate.enabled=0;
 
 		CREATE EXTENSION IF NOT EXISTS postgis;
 		CREATE EXTENSION IF NOT EXISTS postgis_topology;
@@ -24,5 +24,6 @@ for DB in template_postgis "$POSTGRES_DB"; do
 		\c
 		CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;
 		CREATE EXTENSION IF NOT EXISTS postgis_tiger_geocoder;
+		SET safeupdate.enabled=1;
 EOSQL
 done

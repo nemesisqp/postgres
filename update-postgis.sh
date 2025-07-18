@@ -12,7 +12,7 @@ for DB in template_postgis "$POSTGRES_DB" "${@}"; do
     echo "Updating PostGIS extensions '$DB' to $POSTGIS_VERSION"
     psql --dbname="$DB" -c "
         -- Temporarily disable pg-safeupdate for this transaction.
-        SET LOCAL safeupdate.enabled = false;
+        SET safeupdate.enabled=0;
 
         -- Upgrade PostGIS (includes raster)
         CREATE EXTENSION IF NOT EXISTS postgis VERSION '$POSTGIS_VERSION';
@@ -27,5 +27,6 @@ for DB in template_postgis "$POSTGRES_DB" "${@}"; do
         -- Upgrade US Tiger Geocoder
         CREATE EXTENSION IF NOT EXISTS postgis_tiger_geocoder VERSION '$POSTGIS_VERSION';
         ALTER EXTENSION postgis_tiger_geocoder UPDATE TO '$POSTGIS_VERSION';
+        SET safeupdate.enabled=1;
     "
 done

@@ -12,9 +12,7 @@ mkdir -p "$(dirname "${PGBACKREST_CONFIG}")"
 # Write the base configuration that is common to both local and S3 setups.
 cat > "${PGBACKREST_CONFIG}" <<__EOT__
 [global]
-# The location of the PostgreSQL data directory.
-# This is required for operations like archive-push when PG provides a relative WAL path.
-pg1-path=/var/lib/postgresql/data
+spool-path=/pgbackrest/spool
 
 # Force a checkpoint to start backup immediately.
 start-fast=y
@@ -31,10 +29,9 @@ compress-level=6
 
 log-level-console=info
 log-level-file=detail
-# Define the spool path within our consolidated volume.
-spool-path=/pgbackrest/spool
 
 repo1-retention-full=13
+repo1-path=/pgbackrest/repo
 __EOT__
 
 # Conditionally add repository configuration based on environment variables.
@@ -48,7 +45,6 @@ if [ -n "${PGBR_S3_ENDPOINT}" ]; then
     cat >> "${PGBACKREST_CONFIG}" <<__EOT__
 repo1-type=s3
 # Define the repo path within our consolidated volume.
-repo1-path=/pgbackrest/repo
 repo1-s3-uri-style=path
 repo1-s3-region=${PGBR_S3_REGION:-us-east-1}
 repo1-s3-endpoint=${PGBR_S3_ENDPOINT}
@@ -62,8 +58,6 @@ else
     # Append local repository configuration.
     cat >> "${PGBACKREST_CONFIG}" <<__EOT__
 repo1-type=posix
-# Define the repo path within our consolidated volume.
-repo1-path=/pgbackrest/repo
 __EOT__
 fi
 
@@ -71,6 +65,7 @@ fi
 cat >> "${PGBACKREST_CONFIG}" <<__EOT__
 
 [default]
+pg1-path=/var/lib/postgresql/data
 __EOT__
 
 # Wait for PostgreSQL to be ready before creating the stanza.
