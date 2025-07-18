@@ -48,7 +48,7 @@ ENV PGVECTORSCALE_VERSION=0.8.0
 ENV POSTGIS_MAJOR=3
 ENV SUPERCRONIC_VERSION=v0.2.34
 
-# install pgroonga
+# --- STEP 1: Install all system dependencies first. These change rarely. ---
 RUN \
   apt update && \
   apt install -y -V --no-install-recommends lsb-release wget ca-certificates curl pgbackrest tzdata libxml2 libssh2-1 && \
@@ -70,32 +70,16 @@ RUN \
   apt clean && \
   rm -rf /var/lib/apt/lists/*
 
-# install pgvector & pgvectorscale
-RUN mkdir -p /usr/local/lib/postgresql/
-RUN mkdir -p /usr/local/share/postgresql/extension/
-# copy pgvector
+# --- STEP 2: Copy the pre-built extensions from the builder stage. ---
+# This also changes infrequently.
 COPY --from=builder /tmp/pgvector/vector.so /usr/lib/postgresql/${POSTGRESQL_VERSION}/lib/
 COPY --from=builder /tmp/pgvector/vector.control /usr/share/postgresql/${POSTGRESQL_VERSION}/extension/
 COPY --from=builder /tmp/pgvector/sql/*.sql /usr/share/postgresql/${POSTGRESQL_VERSION}/extension/
-# copy pgvectorscale
 COPY --from=builder /tmp/pgvectorscale/target/release/vectorscale-pg${POSTGRESQL_VERSION}/usr/lib/postgresql/${POSTGRESQL_VERSION}/lib/vectorscale-${PGVECTORSCALE_VERSION}.so /usr/lib/postgresql/${POSTGRESQL_VERSION}/lib/
 COPY --from=builder /tmp/pgvectorscale/target/release/vectorscale-pg${POSTGRESQL_VERSION}/usr/share/postgresql/${POSTGRESQL_VERSION}/extension/*.* /usr/share/postgresql/${POSTGRESQL_VERSION}/extension/
-# copy pg-safeupdate
 COPY --from=builder /tmp/pg-safeupdate-master/safeupdate.so /usr/lib/postgresql/${POSTGRESQL_VERSION}/lib/
 
-RUN mkdir -p /docker-entrypoint-initdb.d
-COPY ./initdb-postgis.sh /docker-entrypoint-initdb.d/20_postgis.sh
-COPY ./update-postgis.sh /usr/local/bin
-COPY ./initdb-pgbackrest.sh /docker-entrypoint-initdb.d/10_pgbackrest.sh
-COPY ./entrypoint.sh /usr/local/bin/
-# Add execute permissions to all scripts in /usr/local/bin
-RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/update-postgis.sh
-
-RUN echo "shared_preload_libraries='pg_cron,safeupdate'" >> /usr/share/postgresql/postgresql.conf.sample && \
-  echo "cron.database_name='${POSTGRES_DB:-postgres}'" >> /usr/share/postgresql/postgresql.conf.sample
-
-# supercronic
-# supercronic
+# --- STEP 3: Install other tools like supercronic. ---
 RUN ARCH=$(dpkg --print-architecture) && \
     case "$ARCH" in \
         amd64)  SUPERCRONIC=supercronic-linux-amd64 ;; \
@@ -106,29 +90,27 @@ RUN ARCH=$(dpkg --print-architecture) && \
     chmod +x "$SUPERCRONIC" && \
     mv "$SUPERCRONIC" /usr/local/bin/supercronic
 
-# pgbackrest: Create directories and set permissions.
-# We create a single parent directory /pgbackrest that will be the volume mount point.
-# The repo and spool directories will live inside it.
+# --- STEP 4: Create directories and set base postgresql.conf settings ---
 RUN mkdir -p \
+        /docker-entrypoint-initdb.d \
         /etc/pgbackrest/conf.d \
         /var/log/pgbackrest \
         /pgbackrest/repo \
         /pgbackrest/spool \
         /tmp/pgbackrest && \
     touch /etc/pgbackrest/pgbackrest.conf && \
-    # Set ownership to postgres user and group for all related directories.
     chown -R postgres:postgres \
         /etc/pgbackrest \
         /var/log/pgbackrest \
         /pgbackrest \
         /tmp/pgbackrest && \
-    # Set permissions. Note that /pgbackrest is the volume mount point.
     chmod 750 /etc/pgbackrest && \
     chmod 770 /var/log/pgbackrest && \
     chmod 770 /pgbackrest && \
     chmod 750 /tmp/pgbackrest && \
     chmod 755 /usr/bin/pgbackrest && \
-    # Append pgBackRest configuration to the sample postgresql.conf
+    echo "shared_preload_libraries='pg_cron,safeupdate'" >> /usr/share/postgresql/postgresql.conf.sample && \
+    echo "cron.database_name='${POSTGRES_DB:-postgres}'" >> /usr/share/postgresql/postgresql.conf.sample && \
     echo "wal_level = replica" >> /usr/share/postgresql/postgresql.conf.sample && \
     echo "wal_compression = on" >> /usr/share/postgresql/postgresql.conf.sample && \
     echo "max_wal_senders = 4" >> /usr/share/postgresql/postgresql.conf.sample && \
@@ -136,10 +118,16 @@ RUN mkdir -p \
     echo "archive_command = 'pgbackrest --stanza=default archive-push %p'" >> /usr/share/postgresql/postgresql.conf.sample && \
     echo "archive_timeout = 1800" >> /usr/share/postgresql/postgresql.conf.sample
 
+# --- STEP 5: COPY your application scripts. These change most frequently. ---
+COPY ./initdb-pgbackrest.sh /docker-entrypoint-initdb.d/10_pgbackrest.sh
+COPY ./initdb-postgis.sh /docker-entrypoint-initdb.d/20_postgis.sh
+COPY ./update-postgis.sh /usr/local/bin
+COPY ./entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/update-postgis.sh
 
+# --- STEP 6: Final metadata ---
 HEALTHCHECK --interval=10s --timeout=5s --start-period=5s --retries=5 \
   CMD pg_isready -U "${POSTGRES_USER:-postgres}" || exit 1
-
 
 ENTRYPOINT ["entrypoint.sh"]
 CMD ["postgres"]
