@@ -12,12 +12,17 @@ mkdir -p "$(dirname "${PGBACKREST_CONFIG}")"
 # Write the base configuration that is common to both local and S3 setups.
 cat > "${PGBACKREST_CONFIG}" <<__EOT__
 [global]
+# The location of the PostgreSQL data directory.
+# This is required for operations like archive-push when PG provides a relative WAL path.
+pg1-path=/var/lib/postgresql/data
+
 # Force a checkpoint to start backup immediately.
 start-fast=y
 # Use delta restore.
 delta=y
 expire-auto=y
-archive-async=n
+# Enable async archiving for better performance.
+archive-async=y
 process-max=4
 
 # Enable ZSTD compression.
@@ -26,7 +31,8 @@ compress-level=6
 
 log-level-console=info
 log-level-file=detail
-spool-path=/var/spool/pgbackrest
+# Define the spool path within our consolidated volume.
+spool-path=/pgbackrest/spool
 
 repo1-retention-full=13
 __EOT__
@@ -39,10 +45,10 @@ if [ -n "${PGBR_S3_ENDPOINT}" ]; then
     [ -z "${PGBR_S3_BUCKET}" ] && { echo "ERROR: PGBR_S3_BUCKET is not set for S3 backup." >&2; exit 1; }
     [ -z "${PGBR_S3_KEY_SECRET}" ] && { echo "ERROR: PGBR_S3_KEY_SECRET is not set for S3 backup." >&2; exit 1; }
     # Append S3-specific repository configuration.
-    # pgbackrest merges repeated sections, so we add more keys to [global].
     cat >> "${PGBACKREST_CONFIG}" <<__EOT__
 repo1-type=s3
-repo1-path=/var/lib/pgbackrest
+# Define the repo path within our consolidated volume.
+repo1-path=/pgbackrest/repo
 repo1-s3-uri-style=path
 repo1-s3-region=${PGBR_S3_REGION:-us-east-1}
 repo1-s3-endpoint=${PGBR_S3_ENDPOINT}
@@ -56,31 +62,16 @@ else
     # Append local repository configuration.
     cat >> "${PGBACKREST_CONFIG}" <<__EOT__
 repo1-type=posix
-repo1-path=/var/lib/pgbackrest
+# Define the repo path within our consolidated volume.
+repo1-path=/pgbackrest/repo
 __EOT__
 fi
 
+# Define the 'default' stanza. It will inherit pg1-path from the [global] section.
 cat >> "${PGBACKREST_CONFIG}" <<__EOT__
 
 [default]
-pg1-path=/var/lib/postgresql/data
-
 __EOT__
-
-# Create the cron file for supercronic with the desired backup schedule.
-CRON_DIR="/etc/cron.d"
-CRON_FILE="${CRON_DIR}/pgbackrest"
-mkdir -p "${CRON_DIR}"
-echo "Creating cron file at ${CRON_FILE} for scheduled backups..."
-cat > "${CRON_FILE}" <<__EOF__
-# Run a full backup every Sunday at 2:05 AM
-5 2 * * 0 pgbackrest --stanza=default --type=full backup --log-level-console=info
-
-# Run an incremental backup every day (Mon-Sat) at 2:05 AM
-5 2 * * 1-6 pgbackrest --stanza=default --type=incr backup --log-level-console=info
-
-__EOF__
-chmod 0644 "${CRON_FILE}"
 
 # Wait for PostgreSQL to be ready before creating the stanza.
 while ! pg_isready -q; do

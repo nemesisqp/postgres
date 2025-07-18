@@ -95,6 +95,7 @@ RUN echo "shared_preload_libraries='pg_cron,safeupdate'" >> /usr/share/postgresq
   echo "cron.database_name='${POSTGRES_DB:-postgres}'" >> /usr/share/postgresql/postgresql.conf.sample
 
 # supercronic
+# supercronic
 RUN ARCH=$(dpkg --print-architecture) && \
     case "$ARCH" in \
         amd64)  SUPERCRONIC=supercronic-linux-amd64 ;; \
@@ -104,13 +105,30 @@ RUN ARCH=$(dpkg --print-architecture) && \
     wget -q "https://github.com/aptible/supercronic/releases/download/${SUPERCRONIC_VERSION}/${SUPERCRONIC}" && \
     chmod +x "$SUPERCRONIC" && \
     mv "$SUPERCRONIC" /usr/local/bin/supercronic
-# pgbackrest
-RUN chmod -R 755 /usr/bin/pgbackrest && \
-    mkdir -p /etc/pgbackrest && mkdir -p /etc/pgbackrest/conf.d && touch /etc/pgbackrest/pgbackrest.conf && chown -R postgres:postgres /etc/pgbackrest && chmod -R 750 /etc/pgbackrest && \
-    mkdir -p /var/log/pgbackrest && chown -R postgres:postgres /var/log/pgbackrest && chmod -R 770 /var/log/pgbackrest && \
-    mkdir -p /var/lib/pgbackrest && chown -R postgres:postgres /var/lib/pgbackrest && chmod -R 770 /var/lib/pgbackrest && \
-    mkdir -p /var/spool/pgbackrest && chown -R postgres:postgres /var/spool/pgbackrest && chmod -R 750 /var/spool/pgbackrest && \
-    mkdir -p /tmp/pgbackrest && chown -R postgres:postgres /tmp/pgbackrest && chmod -R 750 /tmp/pgbackrest && \
+
+# pgbackrest: Create directories and set permissions.
+# We create a single parent directory /pgbackrest that will be the volume mount point.
+# The repo and spool directories will live inside it.
+RUN mkdir -p \
+        /etc/pgbackrest/conf.d \
+        /var/log/pgbackrest \
+        /pgbackrest/repo \
+        /pgbackrest/spool \
+        /tmp/pgbackrest && \
+    touch /etc/pgbackrest/pgbackrest.conf && \
+    # Set ownership to postgres user and group for all related directories.
+    chown -R postgres:postgres \
+        /etc/pgbackrest \
+        /var/log/pgbackrest \
+        /pgbackrest \
+        /tmp/pgbackrest && \
+    # Set permissions. Note that /pgbackrest is the volume mount point.
+    chmod 750 /etc/pgbackrest && \
+    chmod 770 /var/log/pgbackrest && \
+    chmod 770 /pgbackrest && \
+    chmod 750 /tmp/pgbackrest && \
+    chmod 755 /usr/bin/pgbackrest && \
+    # Append pgBackRest configuration to the sample postgresql.conf
     echo "wal_level = replica" >> /usr/share/postgresql/postgresql.conf.sample && \
     echo "wal_compression = on" >> /usr/share/postgresql/postgresql.conf.sample && \
     echo "max_wal_senders = 4" >> /usr/share/postgresql/postgresql.conf.sample && \
@@ -121,6 +139,7 @@ RUN chmod -R 755 /usr/bin/pgbackrest && \
 
 HEALTHCHECK --interval=10s --timeout=5s --start-period=5s --retries=5 \
   CMD pg_isready -U "${POSTGRES_USER:-postgres}" || exit 1
+
 
 ENTRYPOINT ["entrypoint.sh"]
 CMD ["postgres"]
