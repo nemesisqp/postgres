@@ -20,9 +20,6 @@ start-fast=y
 # Use delta restore.
 delta=y
 expire-auto=y
-# Enable async archiving for better performance.
-archive-async=y
-process-max=4
 
 # Enable ZSTD compression.
 compress-type=zst
@@ -31,7 +28,7 @@ compress-level=6
 log-level-console=info
 log-level-file=detail
 
-repo1-retention-full=13
+repo1-retention-full=${PGBACKREST_RETENTION_FULL:-13}
 repo1-path=/pgbackrest/repo
 __EOT__
 
@@ -44,6 +41,10 @@ if [ -n "${PGBR_S3_ENDPOINT}" ]; then
     [ -z "${PGBR_S3_KEY_SECRET}" ] && { echo "ERROR: PGBR_S3_KEY_SECRET is not set for S3 backup." >&2; exit 1; }
     # Append S3-specific repository configuration.
     cat >> "${PGBACKREST_CONFIG}" <<__EOT__
+# Enable async archiving for better performance.
+archive-async=y
+process-max=2
+
 repo1-type=s3
 # Define the repo path within our consolidated volume.
 repo1-s3-uri-style=path
@@ -52,12 +53,17 @@ repo1-s3-endpoint=${PGBR_S3_ENDPOINT}
 repo1-s3-bucket=${PGBR_S3_BUCKET}
 repo1-s3-key=${PGBR_S3_KEY}
 repo1-s3-key-secret=${PGBR_S3_KEY_SECRET}
+repo1-s3-verify-ssl=n
 __EOT__
 
 else
     echo "No S3 endpoint detected. Configuring pgBackRest for local disk backup."
     # Append local repository configuration.
     cat >> "${PGBACKREST_CONFIG}" <<__EOT__
+# Disable async archiving for safe backup.
+archive-async=n
+process-max=4
+
 repo1-type=posix
 __EOT__
 fi
