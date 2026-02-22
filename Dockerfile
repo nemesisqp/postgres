@@ -1,8 +1,8 @@
-FROM postgres:17-bookworm AS builder
+FROM postgres:18-bookworm AS builder
 
-ENV POSTGRESQL_VERSION=17
-ENV PGVECTOR_VERSION=0.8.0
-ENV PGVECTORSCALE_VERSION=0.8.0
+ENV POSTGRESQL_VERSION=18
+ENV PGVECTOR_VERSION=0.8.1
+ENV PGVECTORSCALE_VERSION=0.9.0
 ENV SAFEUPDATE_URL=https://github.com/eradman/pg-safeupdate/archive/master.tar.gz
 
 RUN apt update && \
@@ -40,13 +40,12 @@ RUN cd /tmp && git clone --branch v${PGVECTOR_VERSION} https://github.com/pgvect
 # pg-safeupdate
 RUN cd /tmp && wget -q -O - $SAFEUPDATE_URL | tar xzf - && cd pg-safeupdate-master && gmake
 
-FROM postgres:17-bookworm
+FROM postgres:18-bookworm
 
-ENV POSTGRESQL_VERSION=17
-ENV PGROONGA_VERSION=4.0.1-1
-ENV PGVECTORSCALE_VERSION=0.8.0
+ENV POSTGRESQL_VERSION=18
+ENV PGVECTORSCALE_VERSION=0.9.0
 ENV POSTGIS_MAJOR=3
-ENV SUPERCRONIC_VERSION=v0.2.34
+ENV SUPERCRONIC_VERSION=v0.2.43
 
 # --- STEP 1: Install all system dependencies first. These change rarely. ---
 RUN \
@@ -63,7 +62,7 @@ RUN \
     postgresql-${POSTGRESQL_VERSION}-cron \
     postgresql-${POSTGRESQL_VERSION}-postgis-${POSTGIS_MAJOR} \
     postgresql-${POSTGRESQL_VERSION}-postgis-${POSTGIS_MAJOR}-scripts \
-    postgresql-${POSTGRESQL_VERSION}-pgdg-pgroonga=${PGROONGA_VERSION} \
+    postgresql-${POSTGRESQL_VERSION}-pgdg-pgroonga \
     groonga-normalizer-mysql \
     groonga-token-filter-stem \
     groonga-tokenizer-mecab && \
