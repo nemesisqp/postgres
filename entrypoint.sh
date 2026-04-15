@@ -85,7 +85,7 @@ PGBACKREST_CRON_FULL="${PGBACKREST_CRON_FULL:-5 2 * * 0}"
 # Default: "5 2 * * 1-6" -> Runs at 02:05 AM every Monday through Saturday (Days 1-6).
 PGBACKREST_CRON_INCR="${PGBACKREST_CRON_INCR:-5 2 * * 1-6}"
 
-CRON_FILE="${CRON_DIR}/pgbackrest"
+CRON_FILE="/etc/cron.d/pgbackrest"
 # Ensure the parent directory exists
 mkdir -p "$(dirname "${CRON_FILE}")"
 echo "Creating cron file at ${CRON_FILE} for scheduled backups..."

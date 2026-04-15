@@ -43,6 +43,7 @@ git tag -d $TAG
 git add .
 git commit -m "Hotfix for $TAG"
 git tag $TAG
-git push --follow-tags
+git push
+git push origin $TAG
 
 ```
