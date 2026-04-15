@@ -1,7 +1,7 @@
-FROM postgres:18-bookworm AS builder
+FROM postgres:18-trixie AS builder
 
 ENV POSTGRESQL_VERSION=18
-ENV PGVECTOR_VERSION=0.8.1
+ENV PGVECTOR_VERSION=0.8.2
 ENV PGVECTORSCALE_VERSION=0.9.0
 ENV SAFEUPDATE_URL=https://github.com/eradman/pg-safeupdate/archive/master.tar.gz
 
@@ -40,12 +40,12 @@ RUN cd /tmp && git clone --branch v${PGVECTOR_VERSION} https://github.com/pgvect
 # pg-safeupdate
 RUN cd /tmp && wget -q -O - $SAFEUPDATE_URL | tar xzf - && cd pg-safeupdate-master && gmake
 
-FROM postgres:18-bookworm
+FROM postgres:18-trixie
 
 ENV POSTGRESQL_VERSION=18
 ENV PGVECTORSCALE_VERSION=0.9.0
 ENV POSTGIS_MAJOR=3
-ENV SUPERCRONIC_VERSION=v0.2.43
+ENV SUPERCRONIC_VERSION=v0.2.44
 
 # --- STEP 1: Install all system dependencies first. These change rarely. ---
 RUN \

@@ -14,22 +14,25 @@ mkdir -p "$(dirname "${PGBACKREST_CONFIG}")"
 cat > "${PGBACKREST_CONFIG}" <<__EOT__
 [global]
 spool-path=/pgbackrest/spool
+repo1-path=/pgbackrest/repo
 
-# Force a checkpoint to start backup immediately.
+# Backup behavior
 start-fast=y
-# Use delta restore.
 delta=y
-expire-auto=y
+repo1-retention-full=${PGBACKREST_RETENTION_FULL:-13}
 
-# Enable ZSTD compression.
+# Compression.
 compress-type=zst
-compress-level=6
 
+# Archiving Best Practices
+archive-async=y
+# Bundle small WAL files together (Crucial for S3 API costs and speed)
+repo1-bundle=y
+
+# Logging
 log-level-console=info
 log-level-file=detail
 
-repo1-retention-full=${PGBACKREST_RETENTION_FULL:-13}
-repo1-path=/pgbackrest/repo
 __EOT__
 
 # Conditionally add repository configuration based on environment variables.
@@ -41,9 +44,7 @@ if [ -n "${PGBR_S3_ENDPOINT}" ]; then
     [ -z "${PGBR_S3_KEY_SECRET}" ] && { echo "ERROR: PGBR_S3_KEY_SECRET is not set for S3 backup." >&2; exit 1; }
     # Append S3-specific repository configuration.
     cat >> "${PGBACKREST_CONFIG}" <<__EOT__
-# Enable async archiving for better performance.
-archive-async=y
-process-max=2
+process-max=4
 
 repo1-type=s3
 # Define the repo path within our consolidated volume.
@@ -60,9 +61,7 @@ else
     echo "No S3 endpoint detected. Configuring pgBackRest for local disk backup."
     # Append local repository configuration.
     cat >> "${PGBACKREST_CONFIG}" <<__EOT__
-# Disable async archiving for safe backup.
-archive-async=n
-process-max=4
+process-max=2
 
 repo1-type=posix
 __EOT__
@@ -78,15 +77,21 @@ __EOT__
 # Create the cron file for supercronic with the desired backup schedule.
 # This is done here, as root, before supercronic starts.
 
+# Schedule for FULL backups. 
+# Default: "5 2 * * 0" -> Runs at 02:05 AM every Sunday (Day 0).
 PGBACKREST_CRON_FULL="${PGBACKREST_CRON_FULL:-5 2 * * 0}"
+
+# Schedule for INCREMENTAL backups. 
+# Default: "5 2 * * 1-6" -> Runs at 02:05 AM every Monday through Saturday (Days 1-6).
 PGBACKREST_CRON_INCR="${PGBACKREST_CRON_INCR:-5 2 * * 1-6}"
+
 CRON_FILE="/etc/cron.d/pgbackrest"
 echo "Creating cron file at ${CRON_FILE} for scheduled backups..."
 cat > "${CRON_FILE}" <<__EOF__
-# Run a full backup every Sunday at 2:05 AM
+# Run a full backup
 ${PGBACKREST_CRON_FULL} su - postgres -c "pgbackrest --stanza=default --type=full backup --log-level-console=info"
 
-# Run an incremental backup every day (Mon-Sat) at 2:05 AM
+# Run an incremental backup
 ${PGBACKREST_CRON_INCR} su - postgres -c "pgbackrest --stanza=default --type=incr backup --log-level-console=info"
 __EOF__
 chmod 0644 "${CRON_FILE}"

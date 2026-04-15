@@ -15,3 +15,29 @@ docker buildx build --push --platform linux/arm64,linux/amd64 --tag nemesisqp/po
 
 # image url
 * `ghcr.io/nemesisqp/postgres:latest`
+
+# release for git CI build
+```bash
+TAG="pg18-pgv0.8.2-pgvs0.9.0-pgrg4.0.6"
+
+git add .
+git commit -m "new updates"
+git tag $TAG
+git push --follow-tags
+```
+
+# rollback failed tag and repush
+```bash
+TAG="pg18-pgv0.8.2-pgvs0.9.0-pgrg4.0.6"
+
+# 1. Delete the old tag from remote and local
+git push origin --delete $TAG
+git tag -d $TAG
+
+# 2. Stage, commit, re-create the tag, and push to trigger CI
+git add .
+git commit -m "Hotfix for $TAG"
+git tag $TAG
+git push --follow-tags
+
+```
