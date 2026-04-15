@@ -21,9 +21,14 @@ docker buildx build --push --platform linux/arm64,linux/amd64 --tag nemesisqp/po
 TAG="pg18-pgv0.8.2-pgvs0.9.0-pgrg4.0.6"
 
 git add .
-git commit -m "new updates"
+git commit -m "new updates, $TAG"
 git tag $TAG
-git push --follow-tags
+
+# Push the commit first
+git push
+
+# Explicitly push the tag to trigger CI
+git push origin $TAG
 ```
 
 # rollback failed tag and repush
