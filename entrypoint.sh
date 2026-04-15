@@ -71,7 +71,7 @@ fi
 cat >> "${PGBACKREST_CONFIG}" <<__EOT__
 
 [default]
-pg1-path=/var/lib/postgresql/data
+pg1-path=/var/lib/postgresql/18/docker
 __EOT__
 
 # Create the cron file for supercronic with the desired backup schedule.
