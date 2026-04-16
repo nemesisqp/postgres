@@ -23,23 +23,15 @@ TAG="pg18-pgv0.8.2-pgvs0.9.0-pgrg4.0.6"
 git add .
 git commit -m "new updates, $TAG"
 git tag $TAG
-
-# Push the commit first
 git push
-
-# Explicitly push the tag to trigger CI
 git push origin $TAG
 ```
 
 # rollback failed tag and repush
 ```bash
 TAG="pg18-pgv0.8.2-pgvs0.9.0-pgrg4.0.6"
-
-# 1. Delete the old tag from remote and local
 git push origin --delete $TAG
 git tag -d $TAG
-
-# 2. Stage, commit, re-create the tag, and push to trigger CI
 git add .
 git commit -m "Hotfix for $TAG"
 git tag $TAG
