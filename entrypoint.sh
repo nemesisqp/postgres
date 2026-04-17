@@ -7,14 +7,24 @@ PGDATA=${PGDATA:-/var/lib/postgresql/18/docker}
 # Default config path if not set. This should match the path in the Dockerfile.
 PGBACKREST_CONFIG=${PGBACKREST_CONFIG:-/etc/pgbackrest/pgbackrest.conf}
 mkdir -p "$(dirname "$PGBACKREST_CONFIG")" || true
+chown -R postgres:postgres /etc/pgbackrest
+chmod 750 /etc/pgbackrest
 
-PGBACKREST_REP1=${PGBACKREST_REP1:-/var/lib/pgbackrest/repo1}
-chown -R postgres:postgres "$PGBACKREST_REP1"
-chmod 750 "$PGBACKREST_REP1"
+mkdir -p /var/lib/pgbackrest/repo1 || true
+chown -R postgres:postgres /var/lib/pgbackrest
+chmod 750 /var/lib/pgbackrest
+
+chown -R postgres:postgres /var/log/pgbackrest
+chmod 750 /var/log/pgbackrest
+
+mkdir -p /var/spool/pgbackrest || true
+chown -R postgres:postgres /var/spool/pgbackrest
+chmod 750 /var/spool/pgbackrest
+
 # Write the base configuration that is common to both local and S3 setups.
 cat > "${PGBACKREST_CONFIG}" <<__EOT__
 [global]
-repo1-path=${PGBACKREST_REP1}
+repo1-path=/var/lib/pgbackrest/repo1
 
 # Backup behavior
 start-fast=y
