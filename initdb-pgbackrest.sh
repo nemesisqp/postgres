@@ -7,7 +7,7 @@ while ! pg_isready -q; do
     sleep 3
 done
 
-PGDATA=${PGBACKREST_CONFIG:-/var/lib/postgresql/18/docker}
+PGDATA=${PGDATA:-/var/lib/postgresql/18/docker}
 # Create config file for pgbackrest
 # Default config path if not set. This should match the path in the Dockerfile.
 PGBACKREST_CONFIG=${PGBACKREST_CONFIG:-/etc/pgbackrest/pgbackrest.conf}
@@ -78,7 +78,7 @@ fi
 cat >> "${PGBACKREST_CONFIG}" <<__EOT__
 
 [default]
-pg1-path=${PGDATA}
+pg1-path="${PGDATA}"
 __EOT__
 
 echo "Creating pgBackRest stanza 'default'..."
@@ -89,6 +89,6 @@ echo "Enabling archiving..."
 psql -U postgres -c "ALTER SYSTEM SET archive_mode = 'on';"
 psql -U postgres -c "ALTER SYSTEM SET wal_level = 'replica';"
 psql -U postgres -c "ALTER SYSTEM SET archive_timeout = '1800s';"
-psql -U postgres -c "ALTER SYSTEM SET archive_command = 'pgbackrest --pg1-path ${PGDATA} --stanza=default --log-level-stderr=info archive-push %p';"
+psql -U postgres -c "ALTER SYSTEM SET archive_command = 'pgbackrest --pg1-path \"${PGDATA}\" --stanza=default --log-level-stderr=info archive-push %p';"
 psql -U postgres -c "SELECT pg_reload_conf();"
 echo "Archiving enabled."
