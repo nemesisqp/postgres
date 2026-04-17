@@ -78,7 +78,7 @@ fi
 cat >> "${PGBACKREST_CONFIG}" <<__EOT__
 
 [default]
-pg1-path="${PGDATA}"
+pg1-path=${PGDATA}
 __EOT__
 
 echo "Creating pgBackRest stanza 'default'..."
