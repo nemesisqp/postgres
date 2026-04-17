@@ -108,7 +108,7 @@ RUN mkdir -p \
     chmod 770 /pgbackrest && \
     chmod 750 /tmp/pgbackrest && \
     chmod 755 /usr/bin/pgbackrest && \
-    echo "shared_preload_libraries='pg_cron,safeupdate'" >> /usr/share/postgresql/postgresql.conf.sample && \
+    echo "shared_preload_libraries='pg_cron'" >> /usr/share/postgresql/postgresql.conf.sample && \
     echo "cron.database_name='${POSTGRES_DB:-postgres}'" >> /usr/share/postgresql/postgresql.conf.sample && \
     echo "wal_level = replica" >> /usr/share/postgresql/postgresql.conf.sample && \
     echo "wal_compression = on" >> /usr/share/postgresql/postgresql.conf.sample && \
