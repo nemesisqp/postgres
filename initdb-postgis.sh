@@ -14,16 +14,19 @@ EOSQL
 for DB in template_postgis "$POSTGRES_DB"; do
 	echo "Loading PostGIS extensions into $DB"
 	psql --dbname="$DB" <<-'EOSQL'
-    -- Temporarily disable pg-safeupdate for this transaction.
-    SET safeupdate.enabled=0;
+	    SET session_replication_role = replica;
 
 		CREATE EXTENSION IF NOT EXISTS postgis;
 		CREATE EXTENSION IF NOT EXISTS postgis_topology;
+
 		-- Reconnect to update pg_setting.resetval
 		-- See https://github.com/postgis/docker-postgis/issues/288
 		\c
+	    SET session_replication_role = replica;
+
 		CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;
 		CREATE EXTENSION IF NOT EXISTS postgis_tiger_geocoder;
-		SET safeupdate.enabled=1;
+
+		RESET session_replication_role;
 EOSQL
 done
