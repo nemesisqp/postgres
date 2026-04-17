@@ -10,7 +10,7 @@ done
 PGDATA=${PGDATA:-/var/lib/postgresql/18/docker}
 # Create config file for pgbackrest
 # Default config path if not set. This should match the path in the Dockerfile.
-PGBACKREST_CONFIG=${PGBACKREST_CONFIG:-/etc/pgbackrest/pgbackrest.conf}
+PGBACKREST_CONFIG=${PGBACKREST_CONFIG:-/pgbackrest/pgbackrest.conf}
 
 
 ## Create this just in case it does not exist:
@@ -20,8 +20,6 @@ chown postgres.postgres /etc/pgbackrest/
 
 # The pgBackRest configuration needs to be shared by all containers.
 # We create the directory and set secure permissions.
-umask 0077
-mkdir -p "$(dirname "${PGBACKREST_CONFIG}")"
 
 # Write the base configuration that is common to both local and S3 setups.
 cat > "${PGBACKREST_CONFIG}" <<__EOT__
@@ -87,8 +85,8 @@ cat >> "${PGBACKREST_CONFIG}" <<__EOT__
 pg1-path=${PGDATA}
 __EOT__
 
-chown postgres:postgres /etc/pgbackrest/pgbackrest.conf
-chmod 644 /etc/pgbackrest/pgbackrest.conf
+chown postgres:postgres /pgbackrest/pgbackrest.conf
+chmod 644 /pgbackrest/pgbackrest.conf
 
 echo "Creating pgBackRest stanza 'default'..."
 pgbackrest stanza-create --config=${PGBACKREST_CONFIG} --stanza=default --log-level-stderr=info
@@ -98,6 +96,6 @@ echo "Enabling archiving..."
 psql -U postgres -c "ALTER SYSTEM SET archive_mode = 'on';"
 psql -U postgres -c "ALTER SYSTEM SET wal_level = 'replica';"
 psql -U postgres -c "ALTER SYSTEM SET archive_timeout = '1800s';"
-psql -U postgres -c "ALTER SYSTEM SET archive_command = 'pgbackrest --config=/etc/pgbackrest/pgbackrest.conf --pg1-path=\"${PGDATA}\" --stanza=default --log-level-stderr=info archive-push %p';"
+psql -U postgres -c "ALTER SYSTEM SET archive_command = 'pgbackrest --config=\"${PGBACKREST_CONFIG}\" --pg1-path=\"${PGDATA}\" --stanza=default --log-level-stderr=info archive-push %p';"
 psql -U postgres -c "SELECT pg_reload_conf();"
 echo "Archiving enabled."
