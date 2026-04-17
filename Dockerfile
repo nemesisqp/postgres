@@ -112,10 +112,7 @@ RUN mkdir -p \
     echo "cron.database_name='${POSTGRES_DB:-postgres}'" >> /usr/share/postgresql/postgresql.conf.sample && \
     echo "wal_level = replica" >> /usr/share/postgresql/postgresql.conf.sample && \
     echo "wal_compression = on" >> /usr/share/postgresql/postgresql.conf.sample && \
-    echo "max_wal_senders = 4" >> /usr/share/postgresql/postgresql.conf.sample && \
-    echo "archive_mode = on" >> /usr/share/postgresql/postgresql.conf.sample && \
-    echo "archive_command = 'pgbackrest --stanza=default archive-push %p'" >> /usr/share/postgresql/postgresql.conf.sample && \
-    echo "archive_timeout = 1800" >> /usr/share/postgresql/postgresql.conf.sample
+    echo "max_wal_senders = 4" >> /usr/share/postgresql/postgresql.conf.sample
 
 # --- STEP 5: COPY your application scripts. These change most frequently. ---
 COPY ./initdb-pgbackrest.sh /docker-entrypoint-initdb.d/10_pgbackrest.sh
