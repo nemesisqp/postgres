@@ -39,3 +39,30 @@ git push
 git push origin $TAG
 
 ```
+# How to from source [dataegret](https://dataegret.com/2025/12/pgbackrest-pitr-in-docker-a-simple-demo/)
+## Restore the latest backup into that volume
+Mount the backup repository as read-only (:ro) to avoid any accidental writes to your backups. We also disable archiving on this restored instance to prevent it from pushing WAL archives back to the production repo.
+```bash
+docker run --rm \
+-v pg-test-restore-data:/var/lib/postgresql \
+-v pgbr-repo:/var/lib/pgbackrest:ro \
+nemesisqp/postgres \
+pgbackrest restore --stanza=main --no-delta --log-level-console=info \
+--archive-mode=off --target-timeline=current
+```
+Notes on the flags:
+* `--no-delta` restores into an empty directory.
+* `--archive-mode=off` stops the restored server from archiving WAL.
+* `--target-timeline=current` asks PostgreSQL to recover along the same timeline that was current when the backup was taken.
+
+## Start a temporary PostgreSQL container from the restored volume
+We map container port 5432 to host port 5433 so it does not clash with the main container.
+```bash
+docker run -d \
+--name pg18-pgbackrest-restored \
+-e POSTGRES_PASSWORD=demo \
+-p 5433:5432 \
+-v pg-test-restore-data:/var/lib/postgresql \
+-v pgbr-repo:/var/lib/pgbackrest:ro \
+nemesisqp/postgres
+```

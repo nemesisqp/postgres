@@ -14,6 +14,11 @@ until pg_isready -U postgres; do
   sleep 1
 done
 
-echo "Creating pgBackRest stanza 'main'..."
-pgbackrest stanza-create --stanza=main --log-level-stderr=info
-echo "pgBackRest stanza created successfully."
+echo "Ensuring pgBackRest stanza 'main' exists..."
+
+if ! pgbackrest --stanza=main info >/dev/null 2>&1; then
+  echo "Creating pgBackRest stanza 'main'..."
+  pgbackrest --stanza=main stanza-create --log-level-console=info
+else
+  echo "Stanza 'main' already exists, skipping."
+fi

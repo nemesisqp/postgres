@@ -106,9 +106,12 @@ ${PGBACKREST_CRON_INCR} su - postgres -c "pgbackrest --stanza=main --type=incr b
 __EOF__
 chmod 0644 "${CRON_FILE}"
 
-# Start supercronic in the background, pointing to our newly created file.
-echo "Starting supercronic scheduler in the background..."
-/usr/local/bin/supercronic "${CRON_FILE}" &
+if [ "$1" = "postgres" ]; then
+  # normal postgres flow here
+  # Start supercronic in the background, pointing to our newly created file.
+  echo "Starting supercronic scheduler in the background..."
+  /usr/local/bin/supercronic "${CRON_FILE}" &
+fi
 
 # Execute the original postgres entrypoint.
 # 'exec' is important to replace the shell with the postgres process,
