@@ -8,11 +8,13 @@ PGDATA=${PGDATA:-/var/lib/postgresql/18/docker}
 PGBACKREST_CONFIG=${PGBACKREST_CONFIG:-/etc/pgbackrest/pgbackrest.conf}
 mkdir -p "$(dirname "$PGBACKREST_CONFIG")" || true
 
-
+PGBACKREST_REP1=${PGBACKREST_REP1:-/var/lib/pgbackrest/repo1}
+chown -R postgres:postgres "$PGBACKREST_REP1"
+chmod 750 "$PGBACKREST_REP1"
 # Write the base configuration that is common to both local and S3 setups.
 cat > "${PGBACKREST_CONFIG}" <<__EOT__
 [global]
-repo1-path=/var/lib/pgbackrest/repo1
+repo1-path=${PGBACKREST_REP1}
 
 # Backup behavior
 start-fast=y
