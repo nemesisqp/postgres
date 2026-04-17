@@ -16,9 +16,11 @@ done
 
 echo "Ensuring pgBackRest stanza 'main' exists..."
 
-if ! pgbackrest --stanza=main info >/dev/null 2>&1; then
-  echo "Creating pgBackRest stanza 'main'..."
-  pgbackrest --stanza=main stanza-create --log-level-console=info
+STANZA=main
+
+if [ ! -d "/var/lib/pgbackrest/repo1/backup/$STANZA" ]; then
+  echo "Creating pgBackRest stanza '$STANZA'..."
+  pgbackrest --stanza="$STANZA" stanza-create --log-level-console=info
 else
-  echo "Stanza 'main' already exists, skipping."
+  echo "Stanza '$STANZA' already exists, skipping."
 fi
